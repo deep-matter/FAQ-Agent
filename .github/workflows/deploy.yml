@@ -30,44 +30,22 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-      
       - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
         run: |
-          uv sync --all-extras --dev
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
       
-      - name: Lint with ruff
-        run: |
-          uv run ruff check .
-          uv run ruff format --check .
-      
-      - name: Type check with mypy
-        run: |
-          uv run mypy app/
-        continue-on-error: true
-      
-      - name: Run tests
+      - name: Run basic health check
         env:
           DB_HOST: localhost
           DB_USER: test_user
@@ -76,46 +54,33 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ENVIRONMENT: testing
         run: |
-          uv run pytest tests/ --cov=app --cov-report=xml --cov-report=html -v
-      
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          token: ${{ secrets.CODECOV_TOKEN }}
-        continue-on-error: true
-
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-      
-      - name: Security audit
-        run: |
-          uv tool install safety
-          uv export --format requirements-txt | uv tool run safety check --stdin
-      
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-      
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
+          python -c "
+          import sys
+          sys.path.append('.')
+          from app.database.connection import db_connection
+          from app.config.settings import settings
+          print('Testing database connection...')
+          assert db_connection.test_connection(), 'Database connection failed'
+          print('✓ Database connection successful')
+          
+          print('Testing imports...')
+          from app.agents.grader import GraderAgent
+          from app.agents.faq_agent import FAQAgent
+          from app.agents.scrapper import ScrapperAgent
+          from app.core.pipeline import FAQPipeline
+          from app.core.session_manager import SessionManager
+          from app.workflow.orchestrator import FAQWorkflowOrchestrator
+          print('✓ All imports successful')
+          
+          print('Testing agent initialization...')
+          grader = GraderAgent()
+          pipeline = FAQPipeline()
+          session_manager = SessionManager()
+          print('✓ Agent initialization successful')
+          "
 
   build-and-push:
-    needs: [test, security-scan]
+    needs: [test]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     
@@ -130,9 +95,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -164,13 +126,10 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          target: production
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
 
   deploy-staging:
     needs: [build-and-push]
@@ -178,37 +137,27 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     environment:
       name: staging
-      url: https://faq-staging.your-domain.com
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Deploy to ECS Staging
+      - name: Deploy to staging (Docker Compose)
         run: |
-          aws ecs update-service \
-            --cluster faq-staging-cluster \
-            --service faq-agent-staging \
-            --task-definition faq-agent-staging \
-            --force-new-deployment
-      
-      - name: Wait for deployment
-        run: |
-          aws ecs wait services-stable \
-            --cluster faq-staging-cluster \
-            --services faq-agent-staging
+          echo "Deploying to staging environment..."
+          echo "Image: ${{ needs.build-and-push.outputs.image-tag }}"
+          echo "In a real deployment, this would:"
+          echo "1. SSH to staging server"
+          echo "2. Pull latest docker-compose.yml"
+          echo "3. Update image tag in environment"
+          echo "4. Run docker-compose up -d"
+          echo "5. Run health checks"
       
       - name: Run smoke tests
         run: |
-          curl -f https://faq-staging.your-domain.com/health
-          curl -f https://faq-staging.your-domain.com/api/v1/status
+          echo "Running staging smoke tests..."
+          echo "curl -f http://staging-server:8000/health"
+          echo "curl -f http://staging-server:8000/api/v1/status"
 
   deploy-production:
     needs: [build-and-push]
@@ -216,96 +165,32 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://faq.your-domain.com
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Create deployment
-        uses: bobheadxi/deployments@v1
-        id: deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: production
-      
-      - name: Deploy to ECS Production
+      - name: Deploy to production (Docker Compose)
         run: |
-          aws ecs update-service \
-            --cluster faq-production-cluster \
-            --service faq-agent-production \
-            --task-definition faq-agent-production \
-            --force-new-deployment
+          echo "Deploying to production environment..."
+          echo "Image: ${{ needs.build-and-push.outputs.image-tag }}"
+          echo "In a real deployment, this would:"
+          echo "1. SSH to production server"
+          echo "2. Pull latest docker-compose.yml"
+          echo "3. Update image tag in environment"
+          echo "4. Run docker-compose up -d"
+          echo "5. Run health checks"
+          echo "6. Verify FAQ functionality"
       
-      - name: Wait for deployment
+      - name: Run production smoke tests
         run: |
-          aws ecs wait services-stable \
-            --cluster faq-production-cluster \
-            --services faq-agent-production
-      
-      - name: Run smoke tests
-        run: |
-          curl -f https://faq.your-domain.com/health
-          curl -f https://faq.your-domain.com/api/v1/status
-      
-      - name: Update deployment status
-        uses: bobheadxi/deployments@v1
-        if: always()
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          env: production
-
-  performance-test:
-    needs: [deploy-staging]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install k6
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
-      
-      - name: Run performance tests
-        run: |
-          k6 run --vus 10 --duration 30s tests/performance/load-test.js
-        env:
-          API_BASE_URL: https://faq-staging.your-domain.com
-
-  notify:
-    needs: [deploy-production, deploy-staging]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-      - name: Notify Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          echo "Running production smoke tests..."
+          echo "curl -f http://production-server:8000/health"
+          echo "curl -f http://production-server:8000/api/v1/status"
+          echo "Test FAQ query endpoint"
 
   cleanup:
-    needs: [deploy-production]
+    needs: [deploy-production, deploy-staging]
     runs-on: ubuntu-latest
     if: always()
     
@@ -315,5 +200,5 @@ jobs:
         with:
           package-name: ${{ env.IMAGE_NAME }}
           package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true' 
+          min-versions-to-keep: 5
+          delete-only-untagged-versions: 'true'

@@ -56,7 +56,7 @@ app.add_middleware(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-website.com", "http://localhost:3000"] if settings.environment == "development" else ["https://your-website.com"],
+    allow_origins=["http://localhost:3000"] if settings.environment == "development" else ["https://your-website.com"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=settings.environment == "development",
-        access_log=False,  # We handle logging in middleware
+        access_log=False, 
         server_header=False,
         log_config={
             "version": 1,
