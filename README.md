@@ -190,6 +190,120 @@ Structured JSON logging with configurable levels:
 - Request/response logging
 - Error tracking with stack traces
 
+## FAQ Processing Endpoints
+
+### 5. Basic FAQ Query
+```bash
+curl -X POST "$BASE_URL/api/v1/faq/query" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "query": "What are the admission requirements?",
+    "user_id": "student_123"
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "answer": "Based on our FAQ database, the admission requirements include...",
+  "confidence": "high",
+  "sources": [],
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2024-01-15T10:30:00.123456",
+  "intent": "admission_inquiry"
+}
+```
+
+### 6. FAQ Query with Session ID (Follow-up)
+```bash
+curl -X POST "$BASE_URL/api/v1/faq/query" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "query": "What about the fees for that program?",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "user_id": "student_123"
+  }'
+```
+
+### 7. FAQ Query - Irrelevant Question
+```bash
+curl -X POST "$BASE_URL/api/v1/faq/query" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "query": "What is the weather today?",
+    "user_id": "student_123"
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "answer": "is out of my knowledge base",
+  "confidence": "none",
+  "sources": [],
+  "session_id": "550e8400-e29b-41d4-a716-446655440001",
+  "timestamp": "2024-01-15T10:31:00.123456",
+  "intent": null
+}
+```
+
+## Session Management Endpoints
+
+### 8. Get Session History
+```bash
+curl -X GET "$BASE_URL/api/v1/faq/session/550e8400-e29b-41d4-a716-446655440000/history" \
+  -H "Accept: application/json"
+```
+
+**Expected Response:**
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "history": [
+    {
+      "query": "What are the admission requirements?",
+      "response": "Based on our FAQ database, the admission requirements include...",
+      "confidence": "high",
+      "intent": "admission_inquiry",
+      "metadata": {
+        "keywords": "admission, requirements",
+        "processing_time": "2024-01-15T10:30:00.123456"
+      },
+      "timestamp": "2024-01-15T10:30:00.123456"
+    }
+  ],
+  "total_interactions": 1
+}
+```
+
+### 9. Get Session History with Limit
+```bash
+curl -X GET "$BASE_URL/api/v1/faq/session/550e8400-e29b-41d4-a716-446655440000/history?limit=3" \
+  -H "Accept: application/json"
+```
+
+## User Statistics Endpoints
+
+### 10. Get User Statistics
+```bash
+curl -X GET "$BASE_URL/api/v1/users/student_123/stats" \
+  -H "Accept: application/json"
+```
+
+**Expected Response:**
+```json
+{
+  "user_id": "student_123",
+  "preferences": {},
+  "interaction_count": 5,
+  "last_active": "2024-01-15T10:30:00.123456",
+  "created_at": "2024-01-10T09:00:00.000000"
+}
+```
+
 ## Project Structure
 
 ```
