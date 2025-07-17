@@ -5,9 +5,8 @@
 
 ## Overview
 
-An intelligent FAQ assistant system built with production-grade multi-agent architecture using LangChain and LangGraph. The system transforms stateless LLM interactions into stateful conversations through PostgreSQL-based session management and RAG (Retrieval-Augmented Generation) pipeline.
+An intelligent FAQ assistant system built with multi-agent architecture using LangChain and LangGraph. The system transforms stateless LLM interactions into stateful conversations through PostgreSQL-based session management and RAG (Retrieval-Augmented Generation) pipeline.
 
-**Core Innovation**: Converting traditional stateless AI interactions into conversational FAQ support that remembers previous questions and builds contextual understanding over time.
 
 ![FAQ Agentic Flow Architecture](assets/e2e.png)
 
@@ -89,26 +88,19 @@ docker-compose logs -f faq-agent
 ### Using uv (Recommended)
 
 ```bash
-# Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create virtual environment and install dependencies
 uv sync --all-extras --dev
 
-# Activate virtual environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Start development server
 uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Database Setup
 
 ```bash
-# Start PostgreSQL only
 docker-compose up -d postgres
-
-# The application will automatically initialize tables on startup
 ```
 
 
@@ -198,25 +190,41 @@ Structured JSON logging with configurable levels:
 - Request/response logging
 - Error tracking with stack traces
 
-
-
 ## Project Structure
 
 ```
-faq-agent/
+FAQ-Agent/
 ├── app/                    # Application source code
+│   ├── __init__.py
+│   ├── main.py            # FastAPI application entry point
 │   ├── agents/            # Multi-agent implementations
+│   │   ├── __init__.py
+│   │   ├── grader.py      # Query preprocessing & relevance filtering
+│   │   ├── faq_agent.py   # Central response generation
+│   │   └── scrapper.py    # Intelligent fallback agent
 │   ├── api/               # FastAPI routes and models
+│   │   ├── __init__.py
+│   │   ├── routes.py      # API endpoints
+│   │   └── models.py      # Request/response models
 │   ├── config/            # Configuration management
+│   │   ├── __init__.py
+│   │   └── settings.py    # Environment settings
 │   ├── core/              # Core business logic
+│   │   ├── __init__.py
+│   │   ├── pipeline.py    # FAQ AGENTIC FLOW pipeline
+│   │   └── session_manager.py  # PostgreSQL session management
 │   ├── database/          # Database connections and setup
+│   │   ├── __init__.py
+│   │   ├── connection.py  # Database connection management
+│   │   └── setup.py       # Database initialization
 │   └── workflow/          # LangGraph orchestration
-├── assets/                # Documentation assets
-├── tests/                 # Test suite
-├── .github/workflows/     # CI/CD pipeline
+│       ├── __init__.py
+│       └── orchestrator.py  # Agent workflow coordination
+├── requirements.txt       # Python dependencies
 ├── docker-compose.yml     # Development environment
+├── main.py            # FastAPI application entry point
 ├── Dockerfile            # Production container
-├── pyproject.toml        # Project configuration
-└── main.py              # Application entry point
+├── init.sql              # Database schema
+├── .env.example          # Environment template
+└── README.md             # This file
 ```
-
