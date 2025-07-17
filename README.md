@@ -18,10 +18,7 @@ An intelligent FAQ assistant system built with production-grade multi-agent arch
 3. [Quick Start](#quick-start)
 4. [Development Setup](#development-setup)
 5. [Production Deployment](#production-deployment)
-6. [API Documentation](#api-documentation)
 7. [Configuration](#configuration)
-8. [Monitoring & Observability](#monitoring--observability)
-9. [Contributing](#contributing)
 
 ## System Architecture
 
@@ -86,8 +83,6 @@ cp .env.example .env
 docker-compose up -d
 docker-compose logs -f faq-agent
 ```
-
-
 
 ## Development Setup
 
