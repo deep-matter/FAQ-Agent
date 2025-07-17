@@ -11,7 +11,6 @@ import uvicorn
 import time
 import json
 
-# Configure structured logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -50,13 +49,11 @@ app = FastAPI(
     redoc_url="/redoc" if settings.environment != "production" else None
 )
 
-# Security middleware
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=["localhost", "127.0.0.1", "*.your-domain.com"] if settings.environment == "production" else ["*"]
 )
 
-# CORS middleware with security considerations
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://your-website.com", "http://localhost:3000"] if settings.environment == "development" else ["https://your-website.com"],
@@ -66,21 +63,17 @@ app.add_middleware(
     expose_headers=["X-Request-ID"]
 )
 
-# Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log all requests with timing and security information"""
     start_time = time.time()
     request_id = f"{int(time.time() * 1000)}-{hash(str(request.url)) % 1000000}"
     
-    # Add request ID to headers
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     
-    # Calculate processing time
     process_time = time.time() - start_time
     
-    # Log request details
     log_data = {
         "request_id": request_id,
         "method": request.method,
@@ -98,13 +91,11 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-# Security headers middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     """Add security headers to all responses"""
     response = await call_next(request)
     
-    # Security headers
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -116,7 +107,6 @@ async def add_security_headers(request: Request, call_next):
     
     return response
 
-# Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions"""

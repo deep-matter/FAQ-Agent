@@ -1,6 +1,5 @@
 # FAQ AGENTIC FLOW System
 
-[![CI/CD Pipeline](https://github.com/your-org/faq-agent/actions/workflows/deploy.yml/badge.svg)](https://github.com/your-org/faq-agent/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
@@ -51,13 +50,10 @@ The FAQ AGENTIC FLOW system implements a sophisticated multi-agent architecture:
 
 **Intelligent Agent System**
 - Context-aware responses with conversation history
-- Three-tier fallback strategy for comprehensive coverage
+- Three-tier fallback strategy for coverage
 - Real-time query preprocessing and intent classification
 
-**Scalable Infrastructure**
-- PostgreSQL for reliable session persistence
-- Redis caching for improved performance
-- Horizontal scaling with Docker Compose
+
 
 ## Quick Start
 
@@ -70,8 +66,8 @@ The FAQ AGENTIC FLOW system implements a sophisticated multi-agent architecture:
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-org/faq-agent.git
-cd faq-agent
+git clone https://github.com/deep-matter/FAQ-Agent
+cd /FAQ-Agent
 ```
 
 ### 2. Environment Setup
@@ -91,12 +87,7 @@ docker-compose up -d
 docker-compose logs -f faq-agent
 ```
 
-### 4. Access Services
 
-- **API Documentation**: http://localhost:8000/docs
-- **FAQ API**: http://localhost:8000/api/v1/faq/query
-- **Health Check**: http://localhost:8000/health
-- **System Status**: http://localhost:8000/api/v1/status
 
 ## Development Setup
 
@@ -167,45 +158,29 @@ The repository includes GitHub Actions workflows for automated deployment to AWS
 Key  environment variables:
 
 ```bash
-ENVIRONMENT=production
-OPENAI_API_KEY=your_openai_api_key
-DB_HOST=your_postgres_host
-DB_PASSWORD=secure_password
+OPENAI_API_KEY=your_openai_api_key_here
+DB_HOST=localhost
+DB_NAME=faq_db
+DB_USER=faq_user
+DB_PASSWORD=your_secure_database_password
+DB_PORT=5432
+ENVIRONMENT=development
+LOG_LEVEL=INFO
+API_HOST=0.0.0.0
+API_PORT=8000
+VECTOR_STORE_PATH=./db/chroma_db_faq
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=0
+SCRAPING_TIMEOUT=30
+MAX_SCRAPING_RETRIES=3
+FAQ_URLS=https://your-website.com/faq,https://your-website.com/help
+GRADER_MODEL=o3-mini
+FAQ_AGENT_MODEL=o3-mini
+SCRAPPER_MODEL=4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
+DEBUG=false
+RELOAD=false
 ```
-
-## API Documentation
-
-### Core Endpoints
-
-#### Query FAQ
-```
-POST /api/v1/faq/query
-```
-
-Submit FAQ questions and receive intelligent responses with conversation context.
-
-#### Session History
-```
-GET /api/v1/faq/session/{session_id}/history
-```
-
-Retrieve conversation history for a specific session.
-
-
-Check system health and component status.
-
-### Authentication
-
-The system supports optional user authentication for personalized experiences and analytics.
-
-### Rate Limiting
-
-Default rate limits:
-- 60 requests per minute per IP
-- Burst capacity of 10 requests
-
-## Configuration
-
 ### Core Settings
 
 All configuration is managed through environment variables. See `.env.example` for comprehensive options:
